@@ -29,6 +29,8 @@ import time
 import glob
 import os.path
 import imghdr
+import zipfile
+from PIL import Image
 
 #
 # Library to extract Exif information from digital camera image files.
@@ -2111,21 +2113,26 @@ def main():
 # command line arguments.
 
   filelist = []
+  outFileName = os.path.split(os.getcwd())[1]
   for subdir, dirs, files in os.walk(os.getcwd()):
     for file in files:
         if(imghdr.what(os.path.relpath(subdir+'/'+file)) == 'jpeg'):
             filelist.append(os.path.relpath(subdir+'/'+file))
 
-  outFileName = os.path.split(os.getcwd())[1]
+
   args = sys.argv[1:]
   if len(filelist) < 1:
     print ("No 'jpg' or 'jpeg' files found in directory")
 
   else:
-    timestr = time.strftime(outFileName+" - Processed %Y_%m_%d.kml")
-    print (timestr)
+    timestr = time.strftime(outFileName+" - Processed %Y_%m_%d.kmz")
+    zf = zipfile.ZipFile(timestr, mode='w')
+    for file in filelist:
+      zf.write(file)
     title = os.path.split(os.getcwd())[1]
-    CreateKmlFile(filelist, timestr,title)
+    CreateKmlFile(filelist, 'doc.kml',title)
+  zf.write('doc.kml')
+  zf.close()
 
 
 if __name__ == '__main__':

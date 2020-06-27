@@ -30,7 +30,8 @@ import glob
 import os.path
 import imghdr
 import zipfile
-from PIL import Image
+#import exifread
+#from PIL import Image
 
 #
 # Library to extract Exif information from digital camera image files.
@@ -2026,13 +2027,18 @@ def CreatePhotoOverlay(kml_doc, file_name, the_file, file_iterator):
 
   photo_id = 'photo%s' % file_iterator
   data = GetHeaders(the_file)
+
   try:
       timestamp = data['Image DateTime'].values
   except:
       timestamp = 'No timestamp'
   coords = GetGps(data)
-  orientation = data['Image Orientation'].__str__()
-  print (orientation)
+
+  orientation = data.get('Image Orientation').__str__()
+  if orientation:
+    print (orientation)
+  else:
+    print("No Orientation")
   style = ""
 
   if "180" in orientation:
@@ -2099,7 +2105,8 @@ def CreateKmlFile(file_names, new_file_name,title):
 
   kml_doc = CreateKmlDoc(title)
   file_iterator = 0
-  for key in files.iterkeys():
+  for key in files.keys():
+  #for key in files.iterkeys():
     print('Working on File: ' + str(key) )
     CreatePhotoOverlay(kml_doc, key, files[key], file_iterator)
     file_iterator += 1

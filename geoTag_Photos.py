@@ -243,7 +243,7 @@ def CreatePhotoOverlay(kml_doc, file_name, the_file, file_iterator):
   base = os.path.splitext(file_name)[0]
   ext = os.path.splitext(file_name)[1]
   file_name = base + ext.lower()
-  cdata = "<h2>Date: "+timestamp+"</h2><h3>Latitude: "+str(coords[0])+"</h3><h3>Longitude: "+str(coords[1])+"</h3><img src='./"+file_name+"' width=600 "+style+" >"
+  cdata = "<h3>Date: "+timestamp+"</h3><h3>Latitude: "+str(coords[0])+"</h3><h3>Longitude: "+str(coords[1])+"</h3><img src='"+file_name+"' width=600 "+style+" >"
 
   description.appendChild(kml_doc.createCDATASection(cdata))
   po.appendChild(name)
@@ -290,7 +290,7 @@ def CreatePhotoOverlay(kml_doc, file_name, the_file, file_iterator):
 
 
 
-def CreateKmlFile(file_names, new_file_name,title):
+def CreateKmlFile(baseDir,file_names, new_file_name,title):
   """Creates the KML Document with the PhotoOverlays, and writes it to a file.
   Args:
     file_names: A list object of all the names of the files.
@@ -303,7 +303,7 @@ def CreateKmlFile(file_names, new_file_name,title):
   kml_doc = CreateKmlDoc(title)
 
   for file_name in file_names:
-    the_file = GetFile(file_name)
+    the_file = GetFile(baseDir+'/'+file_name)
     if the_file is None:
       print ("'%s' is unreadable\n" % file_name)
       file_names.remove(file_name)
@@ -351,8 +351,6 @@ def CreateKmlFile(file_names, new_file_name,title):
   kml_file = open(new_file_name, 'w')
   kml_file.write(kml_doc.toprettyxml())
   feature_collection = FeatureCollection(features)
-  with open('Photos.json', 'w') as f:
-    dump(feature_collection, f)
   return json.dumps(feature_collection)
 
 
@@ -383,19 +381,19 @@ def main():
 #               value=2).pack(anchor=tk.W)
 #   root.mainloop()
 
-
-  value = tk.filedialog.askdirectory(initialdir = os.getcwd(),title="Select top directory with pictures")
+  geoPhotoDir = os.getcwd()
+  baseDir = tk.filedialog.askdirectory(initialdir = os.getcwd(),title="Select top directory with pictures")
   #value = input("Please enter path to top photo directory [enter for current directory]:")
-  if len(value) < 1:
-    value =os.getcwd()
+  if len(baseDir) < 1:
+    baseDir =os.getcwd()
   #print(f'You entered {value}')
-
+  os.chdir(baseDir)
   filelist = []
-  outFileName = os.path.split(value)[1]
-  for subdir, dirs, files in os.walk(value):
+  outFileName = os.path.split(baseDir)[1]
+  for subdir, dirs, files in os.walk(baseDir):
     for file in files:
         if(imghdr.what(os.path.relpath(subdir+'/'+file)) == 'jpeg'):
-            filelist.append(os.path.relpath(subdir+'/'+file))
+            filelist.append(os.path.relpath(subdir+'/'+file,baseDir))
 
 
   args = sys.argv[1:]
@@ -403,12 +401,12 @@ def main():
     print ("No 'jpg' or 'jpeg' files found in directory")
 
   else:
-    timestr = time.strftime(outFileName+" - Processed %Y_%m_%d.kmz")
+    timestr = time.strftime(baseDir+"/"+outFileName+" - Processed %Y_%m_%d.kmz")
     zf = zipfile.ZipFile(timestr, mode='w')
     for file in filelist:
       zf.write(file)
     title = os.path.split(os.getcwd())[1]
-    geoJsonCollection = CreateKmlFile(filelist, 'doc.kml',title)
+    geoJsonCollection = CreateKmlFile(baseDir,filelist, 'doc.kml',title)
   zf.write('doc.kml')
   zf.close()
 
@@ -417,9 +415,9 @@ def main():
   #  os.remove("doc.kml")
 
   #input file
-  fin = open("LeafletMap_template.html", "rt")
+  fin = open(geoPhotoDir+"/LeafletMap_template.html", "rt")
   #output file to write the result to
-  fout = open("Working_LeafletMap.html", "wt")
+  fout = open(baseDir+"/Working_LeafletMap.html", "wt")
   #for each line in the input file
   for line in fin:
     #read replace the string and write to output file

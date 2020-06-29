@@ -34,6 +34,7 @@ import zipfile
 import exifread
 import tkinter as tk
 from tkinter import filedialog
+import tkFileDialog
 from geojson import Point, Feature, FeatureCollection, dump
 import json
 
@@ -180,6 +181,9 @@ def CreateKmlDoc(title):
   fname =kml_doc.createElement('name')
   fname.appendChild(kml_doc.createTextNode('Photos Without GPS Tag'))
   folder.appendChild(fname)
+  folderid = kml_doc.createElement('id')
+  folderid.appendChild(kml_doc.createTextNode('NoGPSTag'))
+  folder.appendChild(folderid)
   document.appendChild(folder)
 
   return kml_doc
@@ -233,7 +237,8 @@ def CreatePhotoOverlay(kml_doc, file_name, the_file, file_iterator):
       style = "style='-webkit-transform: rotate(90deg);'"
 
   if coords[0] == 0:
-    return
+    folderId = 'NoGPSTag'
+    #return
 
   path,filename = os.path.split(file_name)
   po = kml_doc.createElement('Placemark')
@@ -343,6 +348,7 @@ def CreateKmlFile(baseDir,file_names, new_file_name,title):
   file_iterator = 0
   for key in files.keys():
   #for key in files.iterkeys():
+    print('-------------------------------')
     print('Working on File: ' + str(key) )
     GeoFeature = CreatePhotoOverlay(kml_doc, key, files[key], file_iterator)
     features.append(GeoFeature)
@@ -382,7 +388,7 @@ def main():
 #   root.mainloop()
 
   geoPhotoDir = os.getcwd()
-  baseDir = tk.filedialog.askdirectory(initialdir = os.getcwd(),title="Select top directory with pictures")
+  baseDir = tkFileDialog.askdirectory(initialdir = os.getcwd(),title="Select top directory with pictures")
   #value = input("Please enter path to top photo directory [enter for current directory]:")
   if len(baseDir) < 1:
     baseDir =os.getcwd()

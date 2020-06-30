@@ -63,8 +63,22 @@
         });
     }
 
+    var noGPSPhotos = []
     var photoPoints = <GEOJSON_PHOTOS>;
-	var map = L.map('map').setView([64.75, -147.45], 9);
+
+    for(var i=0; i<photoPoints.features.length; i++){
+        var lat = photoPoints.features[i].geometry.coordinates[1];
+        if (lat == 0){
+            console.log(photoPoints.features[i].properties.Path)
+            console.log('deleting:'+photoPoints.features[i])
+            noGPSPhotos.push(photoPoints.features[i].properties.Path)
+            photoPoints.features.splice(i, 1);
+        }
+    }
+    console.log(noGPSPhotos)
+
+	var map = L.map('map').setView([74.75, -147.45], 9);
+
 
     $('.leaflet-container').css('cursor','crosshair');
 	L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
@@ -100,6 +114,7 @@
 		}
 	}).addTo(map);
 
+	map.fitBounds(photoGroup.getBounds());
 	function onEachFeature(feature, layer) {
 	    //console.log(photoGroup);
 	    layer.on('mouseover', function () {

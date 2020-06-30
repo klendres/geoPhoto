@@ -33,8 +33,10 @@ import imghdr
 import zipfile
 import exifread
 import tkinter as tk
-from tkinter import filedialog
-import tkFileDialog
+try:
+    from tkinter import filedialog
+except ImportError:
+    import tkFileDialog
 from geojson import Point, Feature, FeatureCollection, dump
 import json
 
@@ -159,9 +161,17 @@ def CreateKmlDoc(title):
   openstatus = kml_doc.createElement('open')
   openstatus.appendChild(kml_doc.createTextNode('1'))
   document.appendChild(openstatus)
+  #style for photos
   style = kml_doc.createElement('Style')
   style.setAttribute('id','Photo')
   document.appendChild(style)
+  #Set label style scale to 0
+  lstyle = kml_doc.createElement('LabelStyle')
+  style.appendChild(lstyle)
+  scale = kml_doc.createElement('scale')
+  scale.appendChild(kml_doc.createTextNode('0.0'))
+  lstyle.appendChild(scale)
+
   istyle = kml_doc.createElement('IconStyle')
   style.appendChild(istyle)
   scale = kml_doc.createElement('scale')
@@ -244,6 +254,8 @@ def CreatePhotoOverlay(kml_doc, file_name, the_file, file_iterator):
   po = kml_doc.createElement('Placemark')
   name = kml_doc.createElement('name')
   name.appendChild(kml_doc.createTextNode(filename))
+  snip = kml_doc.createElement('snippet')
+  po.appendChild(snip)
   description = kml_doc.createElement('description')
   base = os.path.splitext(file_name)[0]
   ext = os.path.splitext(file_name)[1]
@@ -388,7 +400,10 @@ def main():
 #   root.mainloop()
 
   geoPhotoDir = os.getcwd()
-  baseDir = tkFileDialog.askdirectory(initialdir = os.getcwd(),title="Select top directory with pictures")
+  try:
+    baseDir = tkFileDialog.askdirectory(initialdir = os.getcwd(),title="Select top directory with pictures")
+  except:
+    baseDir = filedialog.askdirectory(initialdir = os.getcwd(),title="Select top directory with pictures")
   #value = input("Please enter path to top photo directory [enter for current directory]:")
   if len(baseDir) < 1:
     baseDir =os.getcwd()
@@ -402,18 +417,21 @@ def main():
             filelist.append(os.path.relpath(subdir+'/'+file,baseDir))
 
 
+  kmlFileName = time.strftime("GeoTagged_Photos_Processed %Y_%m_%d.kml")
+
   args = sys.argv[1:]
   if len(filelist) < 1:
     print ("No 'jpg' or 'jpeg' files found in directory")
 
   else:
-    timestr = time.strftime(baseDir+"/"+outFileName+" - Processed %Y_%m_%d.kmz")
+    timestr = time.strftime(baseDir+"/GeoTagged_Photos_Processed %Y_%m_%d.kmz")
     zf = zipfile.ZipFile(timestr, mode='w')
     for file in filelist:
       zf.write(file)
     title = os.path.split(os.getcwd())[1]
-    geoJsonCollection = CreateKmlFile(baseDir,filelist, 'doc.kml',title)
-  zf.write('doc.kml')
+
+    geoJsonCollection = CreateKmlFile(baseDir,filelist,kmlFileName,title)
+  zf.write(kmlFileName)
   zf.close()
 
   #remove the temporary doc.kml file

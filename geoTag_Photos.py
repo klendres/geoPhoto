@@ -161,17 +161,16 @@ def CreateKmlDoc(title):
   openstatus = kml_doc.createElement('open')
   openstatus.appendChild(kml_doc.createTextNode('1'))
   document.appendChild(openstatus)
-  #style for photos
+
+  #style for GPS photos
   style = kml_doc.createElement('Style')
-  style.setAttribute('id','Photo')
+  style.setAttribute('id','GPSphoto')
   document.appendChild(style)
-  #Set label style scale to 0
   lstyle = kml_doc.createElement('LabelStyle')
   style.appendChild(lstyle)
   scale = kml_doc.createElement('scale')
   scale.appendChild(kml_doc.createTextNode('0.0'))
   lstyle.appendChild(scale)
-
   istyle = kml_doc.createElement('IconStyle')
   style.appendChild(istyle)
   scale = kml_doc.createElement('scale')
@@ -182,19 +181,63 @@ def CreateKmlDoc(title):
   href.appendChild(kml_doc.createTextNode('http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png'))
   icon.appendChild(href)
   istyle.appendChild(icon)
+
+  #style for noGPS photos
+  style = kml_doc.createElement('Style')
+  style.setAttribute('id','noGPSphoto')
+  document.appendChild(style)
+  lstyle = kml_doc.createElement('LabelStyle')
+  style.appendChild(lstyle)
+  scale = kml_doc.createElement('scale')
+  scale.appendChild(kml_doc.createTextNode('0.0'))
+  lstyle.appendChild(scale)
+  istyle = kml_doc.createElement('IconStyle')
+  style.appendChild(istyle)
+  icon = kml_doc.createElement('Icon')
+  istyle.appendChild(icon)
+
   folder = kml_doc.createElement('Folder')
   fname =kml_doc.createElement('name')
-  fname.appendChild(kml_doc.createTextNode('GPS Tagged Photos'))
-  folder.appendChild(fname)
-  document.appendChild(folder)
-  folder = kml_doc.createElement('Folder')
-  fname =kml_doc.createElement('name')
-  fname.appendChild(kml_doc.createTextNode('Photos Without GPS Tag'))
+  fname.appendChild(kml_doc.createTextNode('Photos'))
   folder.appendChild(fname)
   folderid = kml_doc.createElement('id')
-  folderid.appendChild(kml_doc.createTextNode('NoGPSTag'))
+  folderid.appendChild(kml_doc.createTextNode('photos'))
   folder.appendChild(folderid)
   document.appendChild(folder)
+#   folder = kml_doc.createElement('Folder')
+#   fname =kml_doc.createElement('name')
+#   fname.appendChild(kml_doc.createTextNode('Photos Without GPS Tag'))
+#   folder.appendChild(fname)
+#   folderid = kml_doc.createElement('id')
+#   folderid.appendChild(kml_doc.createTextNode('noGPSphotos'))
+#   folder.appendChild(folderid)
+#   document.appendChild(folder)
+
+  return kml_doc
+
+def scrubKML(kml_doc):
+  avgLat = 0
+  avgLon = 0
+  avgElev = 0
+  num = 0
+
+  for node in kml_doc.getElementsByTagName('coordinates'):  # visit every node <bar />
+    coordinates = node.firstChild.data
+
+    lat,lon,elev = coordinates.split(',')
+    if lat <> '0':
+      avgLat = float(lat) + avgLat
+      avgLon = float(lon) + avgLon
+      avgElev = float(elev) + avgElev
+      num = num +1
+  avgLat = avgLat/num
+  avgLon = avgLon/num
+  avgElev = avgElev/num
+  for node in kml_doc.getElementsByTagName('coordinates'):  # visit every node <bar />
+    coordinates = node.firstChild.data
+    lat,lon,elev = coordinates.split(',')
+    if lat == '0':
+      node.firstChild.data = str(avgLat)+','+str(avgLon)+','+'-99999'
 
   return kml_doc
 
@@ -215,7 +258,7 @@ def CreatePhotoOverlay(kml_doc, file_name, the_file, file_iterator):
   photo_id = 'photo%s' % file_iterator
 
   folderId = '-'.join(splitall(file_name)[:-1])
-  print(folderId)
+
 
 
 
@@ -246,16 +289,29 @@ def CreatePhotoOverlay(kml_doc, file_name, the_file, file_iterator):
       print('new style 90 ccw')
       style = "style='-webkit-transform: rotate(90deg);'"
 
-  if coords[0] == 0:
-    folderId = 'NoGPSTag'
-    #return
+  kmlstyle = '#GPSphoto'
+  kmlvis = '1'
 
   path,filename = os.path.split(file_name)
+
+  placeName = filename
+
+  if coords[0] == 0:
+    kmlstyle = '#noGPSphoto'
+    kmlvis = '0'
+    placeName = 'No GPS - '+filename
+    #return
+
+
   po = kml_doc.createElement('Placemark')
   name = kml_doc.createElement('name')
-  name.appendChild(kml_doc.createTextNode(filename))
+  name.appendChild(kml_doc.createTextNode(placeName))
   snip = kml_doc.createElement('snippet')
   po.appendChild(snip)
+
+  vis = kml_doc.createElement('visibility')
+  vis.appendChild(kml_doc.createTextNode(kmlvis))
+
   description = kml_doc.createElement('description')
   base = os.path.splitext(file_name)[0]
   ext = os.path.splitext(file_name)[1]
@@ -266,7 +322,7 @@ def CreatePhotoOverlay(kml_doc, file_name, the_file, file_iterator):
   po.appendChild(name)
   po.appendChild(description)
   styleurl = kml_doc.createElement('styleUrl')
-  styleurl.appendChild(kml_doc.createTextNode('#Photo'))
+  styleurl.appendChild(kml_doc.createTextNode(kmlstyle))
   po.appendChild(styleurl)
 
   point = kml_doc.createElement('Point')
@@ -283,13 +339,72 @@ def CreatePhotoOverlay(kml_doc, file_name, the_file, file_iterator):
   point.appendChild(coordtext)
   po.appendChild(point)
 
+
+  exists = 0
+
+
   folder = kml_doc.getElementsByTagName('Folder')[0]
   for node in kml_doc.getElementsByTagName('Folder'):  # visit every node <bar />
     if node.getElementsByTagName("id"):
       name = node.getElementsByTagName("id")[0]
       if folderId == name.firstChild.data:
         folder = node
+        exists = 1
+
+
+  if exists == 0:
+    #Folder does not exist so we need to make one
+    photoPath = splitall(file_name)
+    level = 0
+
+#     start with the GPS or not GPS folder
+#     folder = kml_doc.getElementsByTagName('Folder')[0]
+#     for node in kml_doc.getElementsByTagName('Folder'):  # visit every node <bar />
+#       if node.getElementsByTagName("id"):
+#         name = node.getElementsByTagName("id")[0]
+#         if mainId == name.firstChild.data:
+#           folder = node
+
+
+    #remove the file name and set up folders in kml
+    photoPath = photoPath[:-1]
+    for part in photoPath:
+      create = 1
+      for node in folder.getElementsByTagName('Folder'):  # visit every node <bar />
+          print(node.toxml())
+          if(node):
+            name = node.getElementsByTagName("name")[0]
+            if part == name.firstChild.data:
+              #print('This folder Exists')
+              folder = node
+              create = 0
+      if(create):
+        print('Creating Folder:'+part)
+        nextfolder = kml_doc.createElement('Folder')
+        fname =kml_doc.createElement('name')
+        folderid = kml_doc.createElement('id')
+        folderid.appendChild(kml_doc.createTextNode(folderId))
+        fname.appendChild(kml_doc.createTextNode(part))
+        nextfolder.appendChild(folderid)
+        nextfolder.appendChild(fname)
+        folder.appendChild(nextfolder)
+        folder = nextfolder
+
+          #for part in photoPath:
+
+
+
+#   folder = kml_doc.getElementsByTagName('Folder')[0]
+#   for node in kml_doc.getElementsByTagName('Folder'):  # visit every node <bar />
+#     if node.getElementsByTagName("id"):
+#       name = node.getElementsByTagName("id")[0]
+#       if folderId == name.firstChild.data:
+#         folder = node
   folder.appendChild(po)
+
+
+
+
   if "EXIF DateTimeOriginal" in tags:
       DateTime = tags.get('EXIF DateTimeOriginal').__str__()
   else:
@@ -319,6 +434,7 @@ def CreateKmlFile(baseDir,file_names, new_file_name,title):
 
   kml_doc = CreateKmlDoc(title)
 
+
   for file_name in file_names:
     the_file = GetFile(baseDir+'/'+file_name)
     if the_file is None:
@@ -327,38 +443,39 @@ def CreateKmlFile(baseDir,file_names, new_file_name,title):
       continue
     else:
       files[file_name] = the_file
-      photoPath = splitall(file_name)
-      level = 0
-      folder = kml_doc.getElementsByTagName('Folder')[0]
-
-      #remove the file name and set up folders in kml
-      photoPath = photoPath[:-1]
-      for part in photoPath:
-        create = 1
-        for node in folder.getElementsByTagName('Folder'):  # visit every node <bar />
-            name = node.getElementsByTagName("name")[0]
-            if part == name.firstChild.data:
-                #print('This folder Exists')
-                folder = node
-                create = 0
-        if(create):
-          print('Creating Folder:'+part)
-          nextfolder = kml_doc.createElement('Folder')
-          fname =kml_doc.createElement('name')
-          folderid = kml_doc.createElement('id')
-          folderid.appendChild(kml_doc.createTextNode('-'.join(photoPath)))
-          fname.appendChild(kml_doc.createTextNode(part))
-          nextfolder.appendChild(folderid)
-          nextfolder.appendChild(fname)
-          folder.appendChild(nextfolder)
-          folder = nextfolder
-
-      #for part in photoPath:
+#       photoPath = splitall(file_name)
+#       level = 0
+#       folder = kml_doc.getElementsByTagName('Folder')[0]
+#
+#       #remove the file name and set up folders in kml
+#       photoPath = photoPath[:-1]
+#       for part in photoPath:
+#         create = 1
+#         for node in folder.getElementsByTagName('Folder'):  # visit every node <bar />
+#             name = node.getElementsByTagName("name")[0]
+#             if part == name.firstChild.data:
+#                 #print('This folder Exists')
+#                 folder = node
+#                 create = 0
+#         if(create):
+#           print('Creating Folder:'+part)
+#           nextfolder = kml_doc.createElement('Folder')
+#           fname =kml_doc.createElement('name')
+#           folderid = kml_doc.createElement('id')
+#           folderid.appendChild(kml_doc.createTextNode('-'.join(photoPath)))
+#           fname.appendChild(kml_doc.createTextNode(part))
+#           nextfolder.appendChild(folderid)
+#           nextfolder.appendChild(fname)
+#           folder.appendChild(nextfolder)
+#           folder = nextfolder
+#
+#       #for part in photoPath:
 
 
 
   file_iterator = 0
-  for key in files.keys():
+
+  for key in sorted(files.keys()):
   #for key in files.iterkeys():
     print('-------------------------------')
     print('Working on File: ' + str(key) )
@@ -366,6 +483,7 @@ def CreateKmlFile(baseDir,file_names, new_file_name,title):
     features.append(GeoFeature)
     file_iterator += 1
 
+  kml_doc = scrubKML(kml_doc)
   kml_file = open(new_file_name, 'w')
   kml_file.write(kml_doc.toprettyxml())
   feature_collection = FeatureCollection(features)
@@ -413,10 +531,16 @@ def main():
   outFileName = os.path.split(baseDir)[1]
   for subdir, dirs, files in os.walk(baseDir):
     for file in files:
+        toss, file_extension = os.path.splitext(os.path.relpath(subdir+'/'+file))
         if(imghdr.what(os.path.relpath(subdir+'/'+file)) == 'jpeg'):
-            filelist.append(os.path.relpath(subdir+'/'+file,baseDir))
+          filelist.append(os.path.relpath(subdir+'/'+file,baseDir))
+        elif (file_extension.upper() == '.JPG'):
+          filelist.append(os.path.relpath(subdir+'/'+file,baseDir))
+        else:
+          print('File: '+os.path.relpath(subdir+'/'+file)+' is not and image file')
+          print(imghdr.what(os.path.relpath(subdir+'/'+file)))
 
-
+  filelist.sort()
   kmlFileName = time.strftime("GeoTagged_Photos_Processed %Y_%m_%d.kml")
 
   args = sys.argv[1:]
@@ -431,8 +555,8 @@ def main():
     title = os.path.split(os.getcwd())[1]
 
     geoJsonCollection = CreateKmlFile(baseDir,filelist,kmlFileName,title)
-  zf.write(kmlFileName)
-  zf.close()
+    zf.write(kmlFileName)
+    zf.close()
 
   #remove the temporary doc.kml file
   #if os.path.exists("doc.kml"):

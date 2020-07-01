@@ -64,8 +64,9 @@
     }
 
     var noGPSPhotos = []
-    var photoPoints = <GEOJSON_PHOTOS>;
+    //var photoPoints =  < GEOJSON_PHOTOS>;
 
+    var photoPoints =  <GEOJSON_PHOTOS>;
     for(var i=0; i<photoPoints.features.length; i++){
         var lat = photoPoints.features[i].geometry.coordinates[1];
         if (lat == 0){
@@ -118,21 +119,11 @@
 	function onEachFeature(feature, layer) {
 	    //console.log(photoGroup);
 	    layer.on('mouseover', function () {
-            // this.setStyle({
-//                 'fillColor': '#0000ff'
-//             });
-            $
             $("#aImgview").attr("src",this.feature.properties.Path);
             $("#aImg").attr("href",this.feature.properties.Path);
             $("#aImg").attr("title","Taken: "+this.feature.properties.Datetime+"<br/>\nFile:"+this.feature.properties.Path);
         });
-// 		var popupContent = "<p>I started out as a GeoJSON " +
-// 				feature.geometry.type + ", but now I'm a Leaflet vector!</p>";
-//
-// 		if (feature.properties && feature.properties.popupContent) {
-// 			popupContent += feature.properties.popupContent;
-// 		}
-// 		layer.bindPopup(popupContent);
+
 	}
 
 	$(function () {

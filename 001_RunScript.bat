@@ -24,7 +24,7 @@ C:\Python27\ArcGIS10.2\python.exe  geoTag_Photos.py > "Geotag_photos_LOG.txt"
 GOTO END
 
 :FIVE
-C:\Python27\ArcGIS10.5\python.exe  geoTag_Photos.py > "Geotag_photos_LOG.txt" >CON
+C:\Python27\ArcGIS10.5\python.exe  geoTag_Photos.py > "Geotag_photos_LOG.txt"
 GOTO END
 
 :END

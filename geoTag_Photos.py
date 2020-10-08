@@ -34,9 +34,10 @@ import zipfile
 import exifread
 import tkinter as tk
 
-from tkinter import filedialog
-
-import tkFileDialog
+try:
+    from tkinter import filedialog
+except ImportError:
+    import tkFileDialog
 from geojson import Point, Feature, FeatureCollection, dump
 import json
 

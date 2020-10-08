@@ -225,7 +225,7 @@ def scrubKML(kml_doc):
     coordinates = node.firstChild.data
 
     lat,lon,elev = coordinates.split(',')
-    if lat <> '0':
+    if lat != '0':
       avgLat = float(lat) + avgLat
       avgLon = float(lon) + avgLon
       avgElev = float(elev) + avgElev
